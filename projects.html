@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ProjScope - Past Projects</title>
+  <style>
+    body { margin:0; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#f5f6fa; }
+    header { background: linear-gradient(90deg,#1a73e8,#d32f2f); color:white; padding:1rem; display:flex; align-items:center; justify-content:space-between; }
+    header img { height:50px; margin-right:1rem; }
+    .container { max-width:1000px; margin:2rem auto; background:white; padding:2rem; border-radius:12px; box-shadow:0 0 15px rgba(0,0,0,0.08); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+    .card { padding:16px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.06); background:white; }
+    .tag { font-size:12px; color:#fff; padding:4px 8px; border-radius:6px; background:#1a73e8; display:inline-block; margin-bottom:8px; }
+    footer { text-align:center; padding:1rem; background:#1a73e8; color:white; position:fixed; bottom:0; width:100%; }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex; align-items:center;">
+      <img src="images/mitslogo.png" alt="MITS Logo" onerror="this.style.display='none'">
+      <h1>Past Projects</h1>
+    </div>
+    <nav>
+      <a href="dashboard.html" style="color:white;margin-right:12px">Dashboard</a>
+      <a href="history.html" style="color:white;margin-right:12px">History</a>
+      <a href="about.html" style="color:white">About</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h2>College Project Samples</h2>
+    <p>Use these examples to compare with your idea (the analyzer uses similar items).</p>
+
+    <div class="grid" id="projectsGrid"></div>
+  </div>
+
+  <footer>© 2025 MITS | Developed by Zero Requeim, MITS Artificial Intelligence</footer>
+
+  <script>
+    const PROJECTS = [
+      { title: "Smart Farming Assistant", year:2023, dept:"CSE-AI", summary:"IoT + ML to detect crop disease and give suggestions." },
+      { title: "Emotion-Based Music Player", year:2024, dept:"CSE-AI", summary:"Plays music based on facial emotion recognition." },
+      { title: "Traffic Density Analyzer", year:2022, dept:"ECE", summary:"Uses CCTV data to estimate traffic density." },
+      { title: "College Event Portal", year:2023, dept:"IT", summary:"Event management platform for college activities." }
+    ];
+
+    const grid = document.getElementById('projectsGrid');
+    for (const p of PROJECTS){
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `<div class="tag">${p.dept} • ${p.year}</div><h3>${p.title}</h3><p style="color:#555">${p.summary}</p>`;
+      grid.appendChild(div);
+    }
+  </script>
+</body>
+</html>

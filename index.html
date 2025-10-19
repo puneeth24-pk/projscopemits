@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ProjScope - MITS College</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height:100vh;
+    }
+    .login-container {
+      display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px;
+    }
+    .login-card {
+      background:white; padding:40px; border-radius:15px; box-shadow:0 15px 35px rgba(0,0,0,0.1);
+      width:100%; max-width:420px; text-align:center;
+    }
+    .college-logo { width:120px; height:auto; margin-bottom:15px; border-radius:8px; }
+    .mits-logo h1 { color:#2c3e50; font-size:2.2em; margin-bottom:5px; font-weight:bold; }
+    .mits-logo p { color:#7f8c8d; font-size:0.9em; margin-bottom:18px; }
+    .login-card h2 { color:#34495e; margin-bottom:18px; }
+    .login-card input, .login-card select {
+      width:100%; padding:12px; margin:8px 0; border:2px solid #ecf0f1; border-radius:8px; font-size:15px;
+    }
+    .login-card input:focus, .login-card select:focus { outline:none; border-color:#3498db; }
+    .login-card button {
+      width:100%; padding:12px; background:linear-gradient(135deg,#3498db,#2980b9); color:white; border:none;
+      border-radius:8px; font-size:16px; cursor:pointer; margin-top:14px;
+    }
+    .toggle-link { margin-top:12px; color:#3498db; cursor:pointer; text-decoration:underline; }
+    .small { font-size:12px; color:#888; margin-top:8px; }
+    .hidden { display:none; }
+    .error { color:#c0392b; font-size:13px; margin-top:6px; }
+  </style>
+</head>
+<body>
+  <div id="loginPage" class="login-container">
+    <div class="login-card">
+      <div class="mits-logo">
+        <img src="images/mitslogo.png" alt="MITS Logo" class="college-logo" onerror="this.style.display='none'"/>
+        <h1>MITS</h1>
+        <p>Madanapalle Institute of Technology & Science</p>
+      </div>
+
+      <h2 id="formTitle">ProjScope Login</h2>
+
+      <form id="authForm" autocomplete="off">
+        <input type="text" id="fullName" placeholder="Full Name" class="register-only hidden" />
+        <input type="text" id="rollNumber" placeholder="Roll Number (e.g., 2469131J0)" required />
+        <input type="number" id="batchYear" placeholder="Batch Year (e.g., 2024)" class="register-only hidden" />
+        <select id="department" class="register-only hidden">
+          <option value="">Select Department</option>
+          <option value="CSE">Computer Science Engineering</option>
+          <option value="CSE-AI">CSE - Artificial Intelligence</option>
+          <option value="IT">Information Technology</option>
+          <option value="ECE">Electronics & Communication</option>
+          <option value="EEE">Electrical & Electronics</option>
+          <option value="MECH">Mechanical Engineering</option>
+          <option value="CIVIL">Civil Engineering</option>
+        </select>
+        <input type="password" id="password" placeholder="Password" required />
+        <div id="formError" class="error hidden"></div>
+        <div class="small">Roll should start with your batch's last two digits (validation done during register)</div>
+        <button type="submit" id="authButton">Login</button>
+      </form>
+
+      <div class="toggle-link" id="toggleLink">Don't have an account? Register here</div>
+    </div>
+  </div>
+
+  <script>
+    /* Shared localStorage keys:
+       - projscope_users : array of user objects {roll, name, batch, dept, password}
+       - projscope_current : current logged user (roll)
+       - projscope_history_{roll} : array of analysis objects
+    */
+
+    let isLoginMode = true;
+    const authForm = document.getElementById('authForm');
+    const formTitle = document.getElementById('formTitle');
+    const authButton = document.getElementById('authButton');
+    const toggleLink = document.getElementById('toggleLink');
+    const registerFields = document.querySelectorAll('.register-only');
+    const formError = document.getElementById('formError');
+
+    // Utilities
+    function getUsers(){
+      try { return JSON.parse(localStorage.getItem('projscope_users') || '[]'); }
+      catch { return []; }
+    }
+    function setUsers(arr){ localStorage.setItem('projscope_users', JSON.stringify(arr)); }
+
+    toggleLink.addEventListener('click', () => {
+      isLoginMode = !isLoginMode;
+      formError.classList.add('hidden');
+      if (isLoginMode){
+        formTitle.textContent = 'ProjScope Login';
+        authButton.textContent = 'Login';
+        toggleLink.textContent = "Don't have an account? Register here";
+        registerFields.forEach(f => f.classList.add('hidden'));
+      } else {
+        formTitle.textContent = 'ProjScope Register';
+        authButton.textContent = 'Register';
+        toggleLink.textContent = 'Already have an account? Login here';
+        registerFields.forEach(f => f.classList.remove('hidden'));
+      }
+    });
+
+    authForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      formError.classList.add('hidden');
+      const roll = document.getElementById('rollNumber').value.trim();
+      const password = document.getElementById('password').value;
+      if (!roll || !password){ showError('Please fill required fields'); return; }
+
+      if (isLoginMode){
+        const users = getUsers();
+        const user = users.find(u => u.roll.toLowerCase() === roll.toLowerCase() && u.password === password);
+        if (user){
+          localStorage.setItem('projscope_current', user.roll);
+          window.location.href = 'dashboard.html';
+        } else {
+          showError('Invalid roll number or password. If new, please register.');
+        }
+      } else {
+        // Registration
+        const fullName = document.getElementById('fullName').value.trim();
+        const batch = document.getElementById('batchYear').value.trim();
+        const dept = document.getElementById('department').value;
+        if (!fullName || !batch || !dept){ showError('Please fill all registration fields'); return; }
+
+        // simple validation: roll should start with last two digits of batch (e.g., "24" for 2024)
+        const lastTwo = String(batch).slice(-2);
+        if (!roll.startsWith(lastTwo)){
+          showError(`Roll must start with your batch's last two digits: "${lastTwo}"`);
+          return;
+        }
+
+        const users = getUsers();
+        const exists = users.some(u => u.roll.toLowerCase() === roll.toLowerCase());
+        if (exists){ showError('Roll already registered. Please login.'); return; }
+
+        const newUser = { roll, name: fullName, batch, dept, password };
+        users.push(newUser);
+        setUsers(users);
+        localStorage.setItem('projscope_current', newUser.roll);
+        // create empty history
+        localStorage.setItem(`projscope_history_${newUser.roll}`, JSON.stringify([]));
+        window.location.href = 'dashboard.html';
+      }
+    });
+
+    function showError(msg){
+      formError.textContent = msg;
+      formError.classList.remove('hidden');
+    }
+
+    // Auto-redirect if already logged in
+    (function autoRedirect(){
+      const cur = localStorage.getItem('projscope_current');
+      if (cur){ window.location.href = 'dashboard.html'; }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Project Idea Analyzer - Dashboard</title>
+  <style>
+    body { margin:0; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color:#f5f6fa; }
+    header {
+      background: linear-gradient(90deg,#1a73e8,#d32f2f);
+      color:white; padding:1rem; display:flex; align-items:center; justify-content:space-between;
+      box-shadow:0 4px 6px rgba(0,0,0,0.2);
+    }
+    header img { height:60px; margin-right:1rem; }
+    nav a { color:white; text-decoration:none; margin:0 0.8rem; font-weight:500; }
+    .container { max-width:900px; margin:2rem auto; background:white; padding:2rem; border-radius:12px; box-shadow:0 0 15px rgba(0,0,0,0.1); }
+    h2 { text-align:center; color:#1a73e8; }
+    textarea { width:100%; height:150px; padding:1rem; border-radius:8px; border:1px solid #ccc; resize:vertical; font-size:1rem; }
+    button { margin-top:1rem; width:100%; padding:0.8rem; font-size:1rem; background:linear-gradient(to right,#1a73e8,#d32f2f); color:white; border:none; border-radius:6px; cursor:pointer; }
+    .result-box { margin-top:1.5rem; background:#f1f1f1; padding:1rem; border-radius:8px; display:none; white-space:pre-wrap; }
+    footer { text-align:center; padding:1rem; background:#1a73e8; color:white; position:fixed; bottom:0; width:100%; }
+    .meta { font-size:0.9rem; color:#555; margin-bottom:12px; }
+    .small { font-size:0.9rem; color:#666; }
+    .flex { display:flex; gap:12px; align-items:center; }
+    .right { display:flex; gap:8px; align-items:center; }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex; align-items:center;">
+      <img src="images/mitslogo.png" alt="MITS Logo" onerror="this.style.display='none'">
+      <h1>Project Idea Analyzer</h1>
+    </div>
+    <nav>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="projects.html">Projects</a>
+      <a href="history.html">History</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+      <a href="#" id="logoutBtn">Logout</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h2>Analyze Your Project Idea</h2>
+    <div class="meta" id="welcomeMeta"></div>
+
+    <p>Enter your final-year project idea below to check if it already exists or how to make it unique:</p>
+    <textarea id="ideaInput" placeholder="Type your project idea here..."></textarea>
+    <button id="analyzeBtn">Analyze Idea</button>
+    <div class="result-box" id="resultBox"></div>
+  </div>
+
+  <footer>© 2025 MITS | Developed by ZERO Requeim, MITS Artificial Intelligence</footer>
+
+  <script>
+    /* Analyzer uses local static project set for matching (keyword-based) and stores results in localStorage history per user */
+    // sample existing projects DB
+    const EXISTING_PROJECTS = [
+      { title: "Smart Farming Assistant", year: 2023, dept: "CSE-AI", summary: "IoT + ML to detect crop disease, suggest fertilizer, remote alerts.", keywords: ["farming","crop","disease","iot","ml","agriculture"] },
+      { title: "Emotion-Based Music Player", year: 2024, dept: "CSE-AI", summary: "Plays music based on real-time emotion detected using webcam.", keywords: ["emotion","music","facial","recognition","opencv"] },
+      { title: "Traffic Density Analyzer", year: 2022, dept: "ECE", summary: "Uses CCTV feeds to estimate traffic density and generate alerts.", keywords: ["traffic","cctv","opencv","density"] },
+      { title: "College Event Portal", year: 2023, dept: "IT", summary: "Portal for organizing college events and student registrations.", keywords: ["event","portal","registration","college","admin"] }
+    ];
+
+    // UI elements
+    const ideaInput = document.getElementById('ideaInput');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const resultBox = document.getElementById('resultBox');
+    const welcomeMeta = document.getElementById('welcomeMeta');
+
+    // auth helpers
+    function getCurrentUser(){
+      const roll = localStorage.getItem('projscope_current');
+      if (!roll) return null;
+      const users = JSON.parse(localStorage.getItem('projscope_users') || '[]');
+      return users.find(u => u.roll === roll) || null;
+    }
+
+    (function init(){
+      const user = getCurrentUser();
+      if (!user){ window.location.href = 'index.html'; return; }
+      welcomeMeta.innerHTML = `Welcome <strong>${user.name}</strong> — Roll: ${user.roll} — Batch: ${user.batch} — Dept: ${user.dept}`;
+    })();
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('projscope_current');
+      window.location.href = 'index.html';
+    });
+
+    function saveHistory(roll, record){
+      const key = `projscope_history_${roll}`;
+      const arr = JSON.parse(localStorage.getItem(key) || '[]');
+      arr.unshift(record); // newest first
+      localStorage.setItem(key, JSON.stringify(arr));
+    }
+
+    // simple keyword based similarity: count keywords from existing projects present in idea
+    function analyzeIdeaText(text){
+      const normalized = text.toLowerCase();
+      const results = [];
+      for (const proj of EXISTING_PROJECTS){
+        let score = 0;
+        for (const kw of proj.keywords){
+          if (normalized.includes(kw)) score++;
+        }
+        if (score > 0){
+          results.push({project: proj, score});
+        }
+      }
+      // sort by score descending
+      results.sort((a,b) => b.score - a.score);
+      return results;
+    }
+
+    function createAnalysisOutput(idea, matches){
+      if (matches.length > 0){
+        // exists -> show top match
+        const top = matches[0];
+        const proj = top.project;
+        const analysisText = [];
+        analysisText.push(`*Status:* Exists / Similar`);
+        analysisText.push(`*Closest Match:* ${proj.title} (${proj.dept}, ${proj.year})`);
+        analysisText.push(`*Goal & Features:* ${proj.summary}`);
+        // drawbacks & suggestions (basic static heuristics)
+        const drawbacks = [
+          "Limited scalability for real users",
+          "May lack real-time performance optimization",
+          "No mobile-first design",
+          "Weak security / authentication in prototype"
+        ];
+        analysisText.push(`*Drawbacks / Improvement Areas:*`);
+        analysisText.push(`- ${drawbacks[0]}`);
+        analysisText.push(`- ${drawbacks[1]}`);
+        analysisText.push(`- ${drawbacks[2]}`);
+        analysisText.push(`*Suggestions for Uniqueness:*`);
+        analysisText.push(`- Add cross-department dataset or multi-modal sensors.`);
+        analysisText.push(`- Integrate a novel evaluation metric and UI visualization.`);
+        analysisText.push(`*Recommended Tech Stack:*`);
+        analysisText.push(`- Frontend: React / Vanilla JS, HTML, CSS`);
+        analysisText.push(`- Local DB: IndexedDB (for large data) / localStorage`);
+        analysisText.push(`- Backend (optional): Node.js + Express + MongoDB or Firebase`);
+        analysisText.push(`*Project Roadmap:*`);
+        analysisText.push(`1) Collect dataset / sample inputs\n2) Prototype core model/logic\n3) Build UI & local storage\n4) Optimize & test on real inputs\n5) Write report & demo`);
+        return analysisText.join('\n');
+      } else {
+        // new
+        const analysisText = [];
+        analysisText.push(`✅ This project idea is new and innovative. You can proceed!`);
+        analysisText.push(`\n*Idea:* "${idea}"`);
+        analysisText.push(`\n*Recommended Tech Stack:*`);
+        analysisText.push(`- Frontend: React / HTML / CSS / Vanilla JS`);
+        analysisText.push(`- Storage: IndexedDB or localStorage`);
+        analysisText.push(`- Optional ML: TensorFlow.js / Python backend (Flask)`);
+        analysisText.push(`\n*Project Roadmap:*`);
+        analysisText.push(`1) Define inputs and outputs\n2) Create static sample projects database\n3) Implement idea similarity (keyword matching)\n4) Add UI for analysis & history storage\n5) Improve matching using embeddings or fuzzy text match`);
+        return analysisText.join('\n');
+      }
+    }
+
+    analyzeBtn.addEventListener('click', () => {
+      const idea = ideaInput.value.trim();
+      if (!idea){ alert('Please enter a project idea to analyze!'); return; }
+
+      const matches = analyzeIdeaText(idea);
+      const out = createAnalysisOutput(idea, matches);
+      resultBox.innerText = out;
+      resultBox.style.display = 'block';
+
+      // Save history
+      const user = getCurrentUser();
+      const record = {
+        idea,
+        result: matches.length > 0 ? 'exists' : 'new',
+        matched: matches.length > 0 ? matches.map(m => ({title: m.project.title, year: m.project.year, dept: m.project.dept, score: m.score})) : [],
+        timestamp: new Date().toISOString()
+      };
+      saveHistory(user.roll, record);
+    });
+  </script>
+</body>
+</html>
